@@ -27,21 +27,21 @@
 (require 's)
 
 (defvar columns '("name" "kcal" "prot" "uh" "fat" "category"))
-
-(defun make-sql-insert (data)
-  "Make sql INSERT clause for data given in DATA list."
-  (let ((data (-reduce-from (lambda (result word)
-                              (concat result word)) "" data)))
-    (concat "INSERT INTO foodstuffs (name, kcal, prot, uh, fat, category)\n"
-            "VALUES ("
-            data
-            ");")))
+(defvar table-name "foodstuffs")
 
 (defun concat-with (separator &rest words)
   "Make a sentence of words dividing it by SEPARATOR.  WORDS are text to concatenate."
   (->> (-reduce-from (lambda (result word)
                        (concat result separator word)) "" words)
        (s-chop-prefix separator)))
+
+(defun make-sql-insert (data)
+  "Make sql INSERT clause for data given in DATA list."
+  (let ((data (-reduce-from (lambda (result word)
+                              (concat result word)) "" data)))
+    (concat "INSERT INTO " table-name " ("
+            (apply #'concat-with (-concat '(", ") columns)) ")\n"
+            "VALUES (" data ");")))
 
 (defun parse-nutrients (start end)
   "Parse lines for database.  START is beginning, END is end."
@@ -56,17 +56,20 @@
                                   (len-columns (length columns))
                                   (words (cond ((> len-elements len-columns)
                                                 ;; put together several first words
-                                                (-> (-concat (list (apply #'concat-with
-                                                                          (-concat '(" ")
-                                                                                   (-> (- len-elements len-columns)
-                                                                                       1+
-                                                                                       (-split-at elements)
-                                                                                       car))))
-                                                             (-> (- len-elements len-columns)
-                                                                 1+
-                                                                 (-split-at elements)
-                                                                 cdr))
-                                                    -flatten))
+                                                (-flatten
+                                                 (-concat
+                                                  (->>
+                                                   (-> (- len-elements len-columns)
+                                                       1+
+                                                       (-split-at elements)
+                                                       car)
+                                                   (-concat '(" "))
+                                                   (apply #'concat-with)
+                                                   list)
+                                                  (-> (- len-elements len-columns)
+                                                      1+
+                                                      (-split-at elements)
+                                                      cdr))))
                                                ((= (length elements) (length columns))
                                                 elements))))
                              (-map-indexed (lambda (index word)
