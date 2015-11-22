@@ -1,6 +1,6 @@
 ;;; parse.el --- parse some text to sql INSERT       -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2015  Novak Boskov
+;; Copyright (C) 2015  Novak Boškov
 
 ;; Author: Novak Boskov <gnovak.boskov@gmail.com>
 ;; Keywords:
@@ -26,7 +26,7 @@
 (require 'dash)
 (require 's)
 
-(defvar columns '("name" "kcal" "prot" "uh" "fat" "category"))
+(defvar columns '("name" "kcal" "uh" "prot" "fat" "category"))
 (defvar table-name "foodstuffs")
 
 (defun concat-with (separator &rest words)
@@ -43,6 +43,14 @@
             (apply #'concat-with (-concat '(", ") columns)) ")\n"
             "VALUES (" data ");")))
 
+(defun data-elements (line)
+  "Return list of data elements from LINE.
+Data parts can be separated with <TAB> and <SPACE>."
+  (->> (split-string line " ")
+       (mapcar (lambda (string-chunk)
+                 (split-string string-chunk "\t")))
+       -flatten))
+
 (defun parse-nutrients (start end)
   "Parse lines for database.  START is beginning, END is end."
   (interactive "r")
@@ -51,7 +59,7 @@
                  ;; list of list consisted of data representing column
                  ;; like '('data1' 'data2' 'data3')
                  (mapcar (lambda (line)
-                           (let* ((elements (split-string line " "))
+                           (let* ((elements (data-elements line))
                                   (len-elements (length elements))
                                   (len-columns (length columns))
                                   (words (cond ((> len-elements len-columns)
@@ -71,12 +79,16 @@
                                                       (-split-at elements)
                                                       cdr))))
                                                ((= (length elements) (length columns))
-                                                elements))))
+                                                elements)
+                                               ((< len-elements len-columns)
+                                                (error "You have provided to few elements in data record.  %d elements provided,  %d columns"
+                                                       len-elements len-columns)))))
                              (-map-indexed (lambda (index word)
                                              (if (< index (- (length words) 1))
                                                  (concat "'" word "'" ", ")
                                                (concat "'" word "'"))) words)))
-                         (split-string (buffer-substring-no-properties start end) "\n")))))
+                         (split-string (s-trim
+                                        (buffer-substring-no-properties start end)) "\n")))))
     (delete-region start end)
     (mapcar (lambda (statement)
               (insert (concat statement "\n\n"))) statements)))
