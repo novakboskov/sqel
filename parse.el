@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2015  Novak Boškov
 
-;; Author: Novak Boskov <gnovak.boskov@gmail.com>
+;; Author: Novak Boškov <gnovak.boskov@gmail.com>
 ;; Keywords:
 
 ;; This program is free software; you can redistribute it and/or modify
